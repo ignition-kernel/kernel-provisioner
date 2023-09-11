@@ -1,0 +1,18 @@
+{
+ "argv": [],
+ "extra_arguments": [],
+ "display_name": "Ignition",
+ "language": "python",
+ "interrupt_mode": "message",
+ "metadata": {
+    "kernel_provisioner": {
+        "provisioner_name": "ignition-kernel-provisioner",
+        "config": {
+            "host_url": "http://127.0.0.1:8088",
+            "endpoint": "system/webdev/jupyter/kernel",
+            "username": "admin",
+            "password": "keyring"
+        }
+    }
+ }
+}

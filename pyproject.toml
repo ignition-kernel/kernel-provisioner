@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ignition_kernel"]
+
+
+[project]
+name = "ignition_kernel"
+version = "0.9.0"
+authors = [
+	{ name="Andrew Geiger", email="andrew@corsosystems.com" },
+]
+
+description = "Jupyter kernel provisioner for connecting to an Ignition instance."
+readme = "README.md"
+
+requires-python = ">=3.6.1"
+
+classifiers=[
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.entry-points."jupyter_client.kernel_provisioners"]
+ignition-kernel-provisioner = "ignition_kernel.provisioner:IgnitionKernelProvisioner"
+
+
+[project.urls]
+Homepage = "https://github.com/ignition-kernel/kernel-provisioner"
+Source = "https://github.com/ignition-kernel/kernel-provisioner"
