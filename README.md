@@ -3,7 +3,7 @@ Juptyer kernel provisioner to orchestrate interfacing with Ignition
 
 # Overview
 
-This project allows connections to be added to Jupyter that let it coordinate requesting kernels from an Ignition instance. The Ignition instance requires a project that contains all the needed code; see the sibling repo `ignition-project` for the project export to load.
+This project allows connections to be added to Jupyter that let it coordinate requesting kernels from an Ignition instance. The Ignition instance requires a project that contains all the needed code; see the sibling repo [ignition-project](https://github.com/ignition-kernel/ignition-project) for the project export to load.
 
 The provisioner requires at least Python 3.6.1 as per `jupyter-client` >=v7.0.0.
 
