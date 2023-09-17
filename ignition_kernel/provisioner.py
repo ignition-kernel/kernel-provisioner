@@ -26,6 +26,8 @@ import requests
 import keyring
 from urllib.parse import urljoin
 import asyncio
+import functools
+import types
 
 
 
@@ -313,6 +315,45 @@ class IgnitionKernelProvisioner(KernelProvisionerBase):
             extra_arguments = kwargs.pop('extra_arguments', [])
             kernel_cmd = self.kernel_spec.argv + extra_arguments
 
+        # monkey-patch the kernel manager so that the sockets use the CurveZMQ encryption
+        create_socket_method = km._create_connected_socket
+
+        def get_kernel_server_public_key(provisioner=self):
+            """A kludge of a closure. Allows the binding to resolve after it's set during kernel launch"""
+            assert self.kernel_server_public_key, 'Kernel server public key needs to be set before post_launch'
+            return self.kernel_server_public_key.encode('utf-8')
+
+        @functools.wraps(create_socket_method)
+        def _create_connected_socket(
+                self, channel: str, identity: Optional[bytes] = None,
+                kernel_server_public_key_getter=get_kernel_server_public_key,
+            ) -> zmq.sugar.socket.Socket:
+            sock = create_socket_method(channel, identity)
+
+            # generate a random set of keys
+            public_key, secret_key = zmq.curve_keypair()
+
+            # disconnect and reconnect so settings can take effect
+            url = self._make_url(channel)
+            sock.disconnect(url)
+
+            # set the options so it can encrypt...
+            #sock.set(zmq.SocketOption.CURVE_SERVER, False)
+            sock.set(zmq.SocketOption.CURVE_PUBLICKEY, public_key)
+            sock.set(zmq.SocketOption.CURVE_SECRETKEY, secret_key)
+            sock.set(zmq.SocketOption.CURVE_SERVERKEY, kernel_server_public_key_getter())
+
+            # ... and reconnect
+            sock.connect(url)
+
+            # return the renewed socket
+            return sock
+
+
+        # bind the monkey-patched method back onto the kernel manager
+        km._create_connected_socket = types.MethodType(_create_connected_socket, km)
+
+
         # OK all that nonsense and we're just going to accept it's not doing anything =/
         assert not kernel_cmd, "No external tooling is used when launching Ignition kernels."
         return await super().pre_launch(cmd=kernel_cmd, **kwargs)
@@ -345,6 +386,9 @@ class IgnitionKernelProvisioner(KernelProvisionerBase):
 
         self.ignition_kernel_id = connection_info.pop('ignition_kernel_id')
 
+        # save the public key the kernel is using so that Jupyter can talk to it
+        self.kernel_server_public_key = connection_info.pop('server_public_key')
+
         assert all(
                 (value.decode('ascii') if isinstance(value, bytes) else value
                     ) == connection_info[key]
@@ -352,6 +396,7 @@ class IgnitionKernelProvisioner(KernelProvisionerBase):
                 in self.connection_info.items()
             )
         return self.connection_info
+
 
 
     async def post_launch(self, **kwargs: Any) -> None:
