@@ -349,10 +349,8 @@ class IgnitionKernelProvisioner(KernelProvisionerBase):
             # return the renewed socket
             return sock
 
-
         # bind the monkey-patched method back onto the kernel manager
         km._create_connected_socket = types.MethodType(_create_connected_socket, km)
-
 
         # OK all that nonsense and we're just going to accept it's not doing anything =/
         assert not kernel_cmd, "No external tooling is used when launching Ignition kernels."
@@ -396,7 +394,6 @@ class IgnitionKernelProvisioner(KernelProvisionerBase):
                 in self.connection_info.items()
             )
         return self.connection_info
-
 
 
     async def post_launch(self, **kwargs: Any) -> None:

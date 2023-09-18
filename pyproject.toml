@@ -8,7 +8,7 @@ packages = ["ignition_kernel"]
 
 [project]
 name = "ignition_kernel"
-version = "0.9.0"
+version = "1.0.0"
 authors = [
 	{ name="Andrew Geiger", email="andrew@corsosystems.com" },
 ]

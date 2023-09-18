@@ -30,6 +30,11 @@ IGNITION_KERNEL_HOSTNAME = os.environ.get('IGNITION_KERNEL_HOSTNAME' , 'http://1
 IGNITION_KERNEL_ENDPOINT = os.environ.get('IGNITION_KERNEL_ENDPOINT' , 'system/webdev/jupyter/kernel')
 IGNITION_KERNEL_URL      = os.environ.get('IGNITION_KERNEL_URL'      , IGNITION_KERNEL_HOSTNAME + '/' + IGNITION_KERNEL_ENDPOINT)
 
+IGNITION_DESIGNER_KERNEL_HOSTNAME = os.environ.get('IGNITION_DESIGNER_KERNEL_HOSTNAME' , 'http://127.0.0.1:8989')
+IGNITION_DESIGNER_KERNEL_ENDPOINT = os.environ.get('IGNITION_DESIGNER_KERNEL_ENDPOINT' , 'kernel')
+IGNITION_DESIGNER_KERNEL_URL      = os.environ.get('IGNITION_DESIGNER_KERNEL_URL'      , IGNITION_DESIGNER_KERNEL_HOSTNAME + '/' + IGNITION_DESIGNER_KERNEL_ENDPOINT)
+
+
 IGNITION_KERNEL_USERNAME = os.environ.get('IGNITION_KERNEL_USERNAME' , 'admin')
 try:
     IGNITION_KERNEL_PASSWORD = os.environ['IGNITION_KERNEL_PASSWORD']
@@ -67,16 +72,19 @@ parser.add_argument('--install', action='store_true',
 parser.add_argument('--remove', action='store_true',
                     help=f"Remove the named installed kernel")
 
+parser.add_argument('--designer', action='store_true',
+                    help=f'Configure for a designer session. Defaults URL to http://127.0.0.1:8989/kernel.')
+
 parser.add_argument('--hostname', dest='gateway_address', metavar='HOST',
-                    default=IGNITION_KERNEL_HOSTNAME,
+                    default=None, # IGNITION_KERNEL_HOSTNAME
                     help=f'URL for the Ignition gateway. Defaults to {IGNITION_KERNEL_HOSTNAME}.')
 
 parser.add_argument('--endpoint', dest='endpoint', metavar='ENDPONT',
-                    default=IGNITION_KERNEL_ENDPOINT,
+                    default=None, # IGNITION_KERNEL_ENDPOINT
                     help=f'Endpoint on gateway that will spin up kernel. Defaults to {IGNITION_KERNEL_ENDPOINT}')
 
 parser.add_argument('--url', dest='url', metavar='URL',
-                    default=IGNITION_KERNEL_URL,
+                    default=None, # IGNITION_KERNEL_URL
                     help=f'Full URL to endpoint on gateway. Defaults to {IGNITION_KERNEL_URL}')
 
 parser.add_argument('--username', dest='username', metavar='USER',
@@ -103,8 +111,8 @@ def get_ignition_kernels():
             pass
     return specs
 
-def print_current_ignition_kernels():
 
+def print_current_ignition_kernels():
     print(f"{'KERNEL NAME':<30} URL")
     print(f"-" * 30 + " ---")
     for kernel_name, location, spec in sorted(get_ignition_kernels()):
@@ -124,35 +132,49 @@ if cli_arguments.list:
 
 
 
-ignition_gateway_address = cli_arguments.gateway_address
-ignition_gateway_endpoint = cli_arguments.endpoint
+if cli_arguments.gateway_address is None:
+    if cli_arguments.designer:
+        ignition_gateway_address = IGNITION_DESIGNER_KERNEL_HOSTNAME
+    else:
+        ignition_gateway_address = IGNITION_KERNEL_HOSTNAME
+else:
+    ignition_gateway_address = cli_arguments.gateway_address
+
+if cli_arguments.endpoint is None:
+    if cli_arguments.designer:
+        ignition_gateway_endpoint = IGNITION_DESIGNER_KERNEL_ENDPOINT
+    else:
+        ignition_gateway_endpoint = IGNITION_KERNEL_ENDPOINT
+else:
+    ignition_gateway_endpoint = cli_arguments.endpoint
 
 # override if url was provided
-if cli_arguments.url != IGNITION_KERNEL_URL:
-    url_parts = urlparse(url)
+if cli_arguments.url is not None:
+    url_parts = urlparse(cli_arguments.url)
 
     ignition_gateway_address = f'{url_parts.scheme}://{url_parts.netloc}'
     ignition_gateway_endpoint = url_parts.path[1:]
 
 
 
-
 if cli_arguments.kernel_name is None:
-    # attempt to connect to the gateway to get it's name
-    gateway_name_pattern = 'class=\"gateway-name\"[^>]*>(?P<gateway_name>.+?)</div>'
-    try:
+    if cli_arguments.designer:
+        ignition_kernel_name = 'localhost-designer'
+    else:
+        # attempt to connect to the gateway to get it's name
+        gateway_name_pattern = 'class=\"gateway-name\"[^>]*>(?P<gateway_name>.+?)</div>'
         try:
-            response = requests.get(ignition_gateway_address)
-        except Exception as error:
-            print(f'Gateway does not appear available at {ignition_gateway_address}. Cannot name kernel based on gateway name.')
-            raise error
-        ignition_kernel_name = re.findall(gateway_name_pattern, response.content.decode('utf-8'))[0]
-    except:
-        print(f'Using default kernel name of {IGNITION_KERNEL_NAME}')
-        ignition_kernel_name = IGNITION_KERNEL_NAME
+            try:
+                response = requests.get(ignition_gateway_address)
+            except Exception as error:
+                print(f'Gateway does not appear available at {ignition_gateway_address}. Cannot name kernel based on gateway name.')
+                raise error
+            ignition_kernel_name = re.findall(gateway_name_pattern, response.content.decode('utf-8'))[0]
+        except:
+            print(f'Using default kernel name of {IGNITION_KERNEL_NAME}')
+            ignition_kernel_name = IGNITION_KERNEL_NAME
 else:
     ignition_kernel_name = cli_arguments.kernel_name
-
 
 
 
@@ -169,9 +191,9 @@ def get_kernel_spec(kernel_name):
 
 def create_keyring_identier(kernel_spec):
     return (
-    kernel_spec['metadata']['kernel_provisioner']['config']['username'] +
-    '@' +
-    kernel_spec['metadata']['kernel_provisioner']['config']['host_url']
+        kernel_spec['metadata']['kernel_provisioner']['config']['username'] +
+        '@' +
+        kernel_spec['metadata']['kernel_provisioner']['config']['host_url']
     )
 
 def clear_password(keyring_identifer=None):
@@ -238,7 +260,6 @@ if cli_arguments.kernel_name is None and not (cli_arguments.install or cli_argum
 
 
 
-
 try:
     KERNEL_SPEC = get_kernel_spec(ignition_kernel_name)
 except Exception as error:
@@ -261,7 +282,6 @@ except Exception as error:
     }
 
 KEYRING_IDENTIFIER = create_keyring_identier(KERNEL_SPEC)
-
 
 
 
@@ -306,6 +326,4 @@ try:
         pass
 except KeyboardInterrupt:
     print('\nCancelled.')
-
-
 
