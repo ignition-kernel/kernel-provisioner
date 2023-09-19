@@ -7,14 +7,29 @@ This project allows connections to be added to Jupyter that let it coordinate re
 
 The provisioner requires at least Python 3.6.1 as per `jupyter-client` >=v7.0.0.
 
+> Note that the provisioner always validates user credentials before spinning up a kernel.
+> To create a connection, you must provide a valid username and password that the Ignition gateway will accept.
+> **Credentials are stored using your operating system's keyring via the [Keyring module](https://github.com/jaraco/keyring)**
 
 # Quickstart
 
-`pip install ignition_kernel --upgrade`
+The easiest way is to use pip directly:
+> `pip install ignition_kernel --upgrade`
 
+## Default `localhost` gateway
 For a blank, fresh install gateway:
-`python -m ignition_kernel --install`
+> `python -m ignition_kernel --install`
 
+## Connect to a `localhost` designer session
+Assuming a `localhost` designer session:
+> `python -m ignition_kernel --install --designer`
+
+To connect a kernel, open the script console of the designer and launch the kernel manager so it can start listening for connections:
+> `shared.tools.jupyter.handlers.web.kernel.launch_designer_kernel_management()`
+
+![image](https://github.com/ignition-kernel/kernel-provisioner/assets/11398106/0676e4bf-8ab1-4c98-8e93-612ce8aa255b)
+
+## Gateway with a domain name
 I have a cert just to stay in the habit of using HTTPS, so my setup looks like this:
 
 ```sh
