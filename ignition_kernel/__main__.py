@@ -249,8 +249,15 @@ def show_kernel_spec(kernel):
 
 
 if cli_arguments.show:
-    show_kernel_spec(ignition_kernel_name)
+    try:
+        show_kernel_spec(ignition_kernel_name)
+    except NoSuchKernel:
+        if ignition_kernel_name == IGNITION_KERNEL_NAME:
+            print(f"Kernel spec for {ignition_kernel_name} not found. Looks like it defaulted - make sure to add the name of the expected kernel at the end of the command")
+        else:
+            print(f"Kernel spec for {ignition_kernel_name}. Check if included in listing via --list switch.")
     exit()
+
 
 
 
